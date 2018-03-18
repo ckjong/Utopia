@@ -32,12 +32,27 @@ json = require("json")
 		canMove = 0,
 		moveDir = 0,
 		threshold = 0,
-		facing = 3,
+		facing = 1,
 		dialogue = 0,
 		name = "Grape",
 		animationkey = 5, -- where animations start
 		n = 1, --stage in single conversation
-		c = 1} -- dialogue case
+		c = 1}, -- dialogue case
+		{
+			grid_x = 9*16,
+			grid_y = 21*16,
+			act_x = 9*16,
+			act_y = 21*16,
+			speed = 30,
+			canMove = 0,
+			moveDir = 0,
+			threshold = 0,
+			facing = 2,
+			dialogue = 0,
+			name = "Lark",
+			animationkey = 9, -- where animations start
+			n = 1, --stage in single conversation
+			c = 1} -- dialogue case
 }
 
 
@@ -71,7 +86,11 @@ objects = {
 			 	 {newAnimation(animsheet1, 4*16, 4, 16, 16, .7 ), "npcs[1].walkup"},
 			   {newAnimation(animsheet1, 5*16, 4, 16, 16, .7 ), "npcs[1].walkdown"},
 			 	 {newAnimation(animsheet1, 6*16, 4, 16, 16, .7 ), "npcs[1].walkleft"},
-				 {newAnimation(animsheet1, 7*16, 4, 16, 16, .7 ), "npcs[1].walkright"}
+				 {newAnimation(animsheet1, 7*16, 4, 16, 16, .7 ), "npcs[1].walkright"},
+				 {newAnimation(animsheet1, 8*16, 4, 16, 16, .7 ), "npcs[2].walkup"},
+				 {newAnimation(animsheet1, 9*16, 4, 16, 16, .7 ), "npcs[2].walkdown"},
+				 {newAnimation(animsheet1, 10*16, 4, 16, 16, .7 ), "npcs[2].walkleft"},
+				 {newAnimation(animsheet1, 11*16, 4, 16, 16, .7 ), "npcs[2].walkright"}
 			 }
 
 --dialogue
@@ -120,21 +139,13 @@ function love.update(dt)
 	if debugview == 0 then
 		if player.canMove == 1 then
 			if love.keyboard.isDown("up") and player.act_y <= player.grid_y then
-				if testNPC(1, player.grid_x, player.grid_y-gridsize) == false then
-					changeGridy (player, 1, 0, -1, -1)
-				end
+				changeGridy (player, 1, 0, -1, -1) -- char, dir, x-test, y-test, multiplier
 			elseif love.keyboard.isDown("down") and player.act_y >= player.grid_y then
-				if testNPC(2, player.grid_x, player.grid_y+gridsize) == false then
-					changeGridy (player, 2, 0, 1, 1)
-				end
+				changeGridy (player, 2, 0, 1, 1)
 			elseif love.keyboard.isDown("left") and player.act_x <= player.grid_x then
-				if testNPC(3, player.grid_x-gridsize, player.grid_y) == false then
-					changeGridx (player, 3, -1, 0, -1)
-				end
+				changeGridx (player, 3, -1, 0, -1)
 			elseif love.keyboard.isDown("right") and player.act_x >= player.grid_x then
-				if testNPC(4, player.grid_x+gridsize, player.grid_y) == false then
-					changeGridx (player, 4, 1, 0, 1)
-				end
+				changeGridx (player, 4, 1, 0, 1)
 			end
 		end
 	elseif debugview == 1 then
@@ -242,12 +253,9 @@ function love.draw()
 		for i = 1, #npcs do
 			local k = npcs[i].animationkey
 			local f = npcs[i].facing-1
-			if npcs[i].dialogue == 1 then
-				love.graphics.draw(animations[k+f][1]["spriteSheet"], animations[k+f][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
-			else
-				love.graphics.draw(animations[k][1]["spriteSheet"], animations[k][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
-			end
+			love.graphics.draw(animations[k+f][1]["spriteSheet"], animations[k+f][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
 		end
+
 
 	--render dialogue box and text
 	if text ~= nil and dialogueMode == 1 then
@@ -307,16 +315,33 @@ function testMap(x, y)
 	return true
 end
 
-function testNPC(x, y, dir)
+function testNPC(dir, x, y)
 	for i = 1, #npcs do
-		print(y, npcs[i].act_y)
-		if dir == 1 or dir == 2 then
-			if y == npcs[i].act_y then
+		x2 = npcs[i].act_x
+		y2 = npcs[i].act_y
+		if dir == 1 then
+			print("triggered 1a")
+			if x == x2 and y - gridsize == y2 then
+				print("triggered 1b")
 				return true
 			end
-		elseif dir == 3 or dir == 4 then
-			if x == npcs[i].act_x then
-		 		return true
+		elseif dir == 2 then
+			print("triggered 2a")
+			if x == x2 and y + gridsize == y2 then
+				print("triggered 2b")
+				return true
+			end
+		elseif dir == 3 then
+			print("triggered 3a")
+			if y == y2 and x - gridsize == x2 then
+				print("triggered 3b")
+				return true
+			end
+		elseif dir == 4 then
+			print("triggered 4a")
+			if y == y2 and x + gridsize == x2 then
+				print("triggered 4b")
+				return true
 			end
 		end
 	end
@@ -327,10 +352,12 @@ end
 function changeGridy(char, dir, x, y, s)
 	char.facing = dir
 	if testMap(x, y) then
-		if math.abs(char.grid_x - char.act_x) <= char.threshold then
-			char.act_x = char.grid_x
-			char.grid_y = char.grid_y + (s * gridsize)
-			char.moveDir = dir
+		if testNPC(dir, char.grid_x, char.grid_y) == false then
+			if math.abs(char.grid_x - char.act_x) <= char.threshold then
+				char.act_x = char.grid_x
+				char.grid_y = char.grid_y + (s * gridsize)
+				char.moveDir = dir
+			end
 		end
 	end
 	return
@@ -340,10 +367,12 @@ end
 function changeGridx(char, dir, x, y, s)
 	char.facing = dir
 	if testMap(x, y) then
-		if math.abs(char.grid_y - char.act_y) <= char.threshold then
-			char.act_y = char.grid_y
-			char.grid_x = char.grid_x + (s * gridsize)
-			char.moveDir = dir
+		if testNPC(dir, char.grid_x, char.grid_y) == false then
+			if math.abs(char.grid_y - char.act_y) <= char.threshold then
+				char.act_y = char.grid_y
+				char.grid_x = char.grid_x + (s * gridsize)
+				char.moveDir = dir
+			end
 		end
 	end
 	return
