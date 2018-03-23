@@ -15,7 +15,7 @@ json = require("json")
 		grid_y = 128,
 		act_x = 128,
 		act_y = 128,
-		speed = 40,
+		speed = 32,
 		canMove = 1,
 		moveDir = 0,
 		threshold = 0,
@@ -33,6 +33,7 @@ json = require("json")
 		moveDir = 0,
 		threshold = 0,
 		facing = 1,
+		start = 1,
 		dialogue = 0,
 		name = "Grape",
 		animationkey = 5, -- where animations start
@@ -47,7 +48,8 @@ json = require("json")
 			canMove = 0,
 			moveDir = 0,
 			threshold = 0,
-			facing = 2,
+			facing = 1,
+			start = 2,
 			dialogue = 0,
 			name = "Lark",
 			animationkey = 9, -- where animations start
@@ -64,9 +66,14 @@ json = require("json")
 --objects
 objects = {
 	{7, 11, "GardeningSign"},
+	{7, 18, "KitchenSign"},
 	{17, 11, "ClinicSign"},
 	{10, 8, "Cauliflower"},
-	{12, 8, "Cauliflower2"}
+	{12, 8, "Cauliflower2"},
+	{18, 16, "RepairSign"},
+	{25, 15, "GlassSign"},
+	{31, 15, "WoodworkingSign"}
+
 }
 --images
 	love.graphics.setDefaultFilter("nearest", "nearest")
@@ -79,18 +86,18 @@ objects = {
 	playerimg = love.graphics.newImage("images/utopia_00.png")
 
 --spritesheet, number of tiles in animation, starting position, length, width, height, duration
-	animations = {{newAnimation(animsheet1, 0, 4, 16, 16, .7), "player.walkup"},
-				 {newAnimation(animsheet1, 1*16, 4, 16, 16, .7), "player.walkdown"},
-				 {newAnimation(animsheet1, 2*16, 4, 16, 16, .7), "player.walkleft"},
-				 {newAnimation(animsheet1, 3*16, 4, 16, 16, .7), "player.walkright"},
-			 	 {newAnimation(animsheet1, 4*16, 4, 16, 16, .7 ), "npcs[1].walkup"},
-			   {newAnimation(animsheet1, 5*16, 4, 16, 16, .7 ), "npcs[1].walkdown"},
-			 	 {newAnimation(animsheet1, 6*16, 4, 16, 16, .7 ), "npcs[1].walkleft"},
-				 {newAnimation(animsheet1, 7*16, 4, 16, 16, .7 ), "npcs[1].walkright"},
-				 {newAnimation(animsheet1, 8*16, 4, 16, 16, .7 ), "npcs[2].walkup"},
-				 {newAnimation(animsheet1, 9*16, 4, 16, 16, .7 ), "npcs[2].walkdown"},
-				 {newAnimation(animsheet1, 10*16, 4, 16, 16, .7 ), "npcs[2].walkleft"},
-				 {newAnimation(animsheet1, 11*16, 4, 16, 16, .7 ), "npcs[2].walkright"}
+	animations = {{newAnimation(animsheet1, 0, 4, 16, 16, .6), "player.walkup"},
+				 {newAnimation(animsheet1, 1*16, 4, 16, 16, .6), "player.walkdown"},
+				 {newAnimation(animsheet1, 2*16, 4, 16, 16, .65), "player.walkleft"},
+				 {newAnimation(animsheet1, 3*16, 4, 16, 16, .65), "player.walkright"},
+			 	 {newAnimation(animsheet1, 4*16, 4, 16, 16, .6 ), "npcs[1].walkup"},
+			   {newAnimation(animsheet1, 5*16, 4, 16, 16, .6 ), "npcs[1].walkdown"},
+			 	 {newAnimation(animsheet1, 6*16, 4, 16, 16, .65 ), "npcs[1].walkleft"},
+				 {newAnimation(animsheet1, 7*16, 4, 16, 16, .65 ), "npcs[1].walkright"},
+				 {newAnimation(animsheet1, 8*16, 4, 16, 16, .6 ), "npcs[2].walkup"},
+				 {newAnimation(animsheet1, 9*16, 4, 16, 16, .6 ), "npcs[2].walkdown"},
+				 {newAnimation(animsheet1, 10*16, 4, 16, 16, .65 ), "npcs[2].walkleft"},
+				 {newAnimation(animsheet1, 11*16, 4, 16, 16, .65 ), "npcs[2].walkright"}
 			 }
 
 --dialogue
@@ -253,7 +260,12 @@ function love.draw()
 		for i = 1, #npcs do
 			local k = npcs[i].animationkey
 			local f = npcs[i].facing-1
-			love.graphics.draw(animations[k+f][1]["spriteSheet"], animations[k+f][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
+			local s = npcs[i].start-1
+			if npcs[i].dialogue == 1 then
+				love.graphics.draw(animations[k+f][1]["spriteSheet"], animations[k+f][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
+			else
+				love.graphics.draw(animations[k+s][1]["spriteSheet"], animations[k+s][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
+			end
 		end
 
 
@@ -261,7 +273,7 @@ function love.draw()
 	if text ~= nil and dialogueMode == 1 then
 		local width = love.graphics.getWidth( )/4
 		local height = love.graphics.getHeight( )/4
-		local recheight = 20
+		local recheight = 24
 		local recwidth = width-8
 		local xnudge = 12
 		local ynudge = 2
@@ -272,7 +284,7 @@ function love.draw()
 		love.graphics.setColor(255, 247, 220)
 		love.graphics.rectangle("fill", boxposx+2, boxposy+2, recwidth-4, recheight-4)
 		love.graphics.setColor(93, 43, 67)
-		love.graphics.printf(text, player.act_x-48, player.act_y+48, 112)
+		love.graphics.printf(text, player.act_x-48, player.act_y+46, 112)
 	end
 	love.graphics.pop()
 end
@@ -320,27 +332,19 @@ function testNPC(dir, x, y)
 		x2 = npcs[i].act_x
 		y2 = npcs[i].act_y
 		if dir == 1 then
-			print("triggered 1a")
 			if x == x2 and y - gridsize == y2 then
-				print("triggered 1b")
 				return true
 			end
 		elseif dir == 2 then
-			print("triggered 2a")
 			if x == x2 and y + gridsize == y2 then
-				print("triggered 2b")
 				return true
 			end
 		elseif dir == 3 then
-			print("triggered 3a")
 			if y == y2 and x - gridsize == x2 then
-				print("triggered 3b")
 				return true
 			end
 		elseif dir == 4 then
-			print("triggered 4a")
 			if y == y2 and x + gridsize == x2 then
-				print("triggered 4b")
 				return true
 			end
 		end
@@ -517,7 +521,7 @@ end
 
 --change text
 function textUpdate (npc, n)
-	text = dialogue.npc[n]
+	text = NPCdialogue.npc[n]
 end
 
 --feed npc to dialogue
@@ -527,7 +531,7 @@ function DialogueSetup (tbl)
 			local name = tbl[i].name
 			local num = tbl[i].n
 			local case = tbl[i].c
-			local dialOpt = dialogue[name][case]
+			local dialOpt = NPCdialogue[name][case]
 			if case == 1 then
 				if num <= #dialOpt then
 					dialogueMode = 1
@@ -540,6 +544,7 @@ function DialogueSetup (tbl)
 					player.canMove = 1
 					tbl[i].n = 1
 					tbl[i].c = 2
+					tbl[i].dialogue = 0
 					return
 				end
 			end
@@ -554,6 +559,7 @@ function DialogueSetup (tbl)
 					dialogueMode = 0
 					player.canMove = 1
 					tbl[i].n = 1
+					tbl[i].dialogue = 0
 					return
 				end
 			end
