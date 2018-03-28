@@ -1,13 +1,15 @@
 NPCdialogue = {
   Grape = {[1] = {"Oh hi.", "Did you see the giant cauliflowers?", "I can't wait to make soup!", "See you later!"}, -- say once
-          [2] = {"Have a great day!"}}, -- repeat
-  Lark = {[1] = {"I love looking at the water, don't you?", "It's a bit too cold for swimming today."}, -- say once
-          [2] = {"Solidarity comrade!"},-- repeat
-          [3] = {"What's your favourite fish?", a = "Mine too!", b = "That makes sense."}}
+          [2] = {"Have a great day!"}, --repeat
+          [3] = nil, --options
+        }, -- repeat
+  Lark = {[1] = {"I love looking at the water, don't you?", "It's a bit too cold for swimming today.", "What's your favourite fish?"}, -- say once
+          [2] = {"See you later comrade!"},-- repeat
+          [3] = {"Mine too!", "That makes sense."}} -- options
 }
 
 playerDialogue = {
-  Lark = {a = "Carp", b = "Trout"}
+  Lark = {"Carp", "Trout"}
 }
 
 objectText = {

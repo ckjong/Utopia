@@ -11,10 +11,10 @@ json = require("json")
 
 --characters
 	player = {
-		grid_x = 128,
-		grid_y = 128,
-		act_x = 128,
-		act_y = 128,
+		grid_x = 8*16,
+		grid_y = 17*16,
+		act_x = 8*16,
+		act_y = 17*16,
 		speed = 32,
 		canMove = 1,
 		moveDir = 0,
@@ -83,7 +83,7 @@ objects = {
 	bg = love.graphics.newImage("images/utopiabg.png")
 	spritesheet1 = love.graphics.newImage("images/utopia.png")
 	animsheet1 = love.graphics.newImage("images/utopia_anim.png")
-	playerimg = love.graphics.newImage("images/utopia_00.png")
+	arrow = love.graphics.newImage("images/utopiaui_0.png")
 
 --spritesheet, number of tiles in animation, starting position, length, width, height, duration
 	animations = {{newAnimation(animsheet1, 0, 4, 16, 16, .6), "player.walkup"},
@@ -103,6 +103,8 @@ objects = {
 --dialogue
 	font = love.graphics.setNewFont("fonts/pixel.ttf", 8)
 	dialogueMode = 0
+	dialogueChoice = 0
+	choicePos = 1
 	text = nil
 
 
@@ -283,8 +285,19 @@ function love.draw()
 		love.graphics.rectangle("fill", boxposx, boxposy, recwidth, recheight)
 		love.graphics.setColor(255, 247, 220)
 		love.graphics.rectangle("fill", boxposx+2, boxposy+2, recwidth-4, recheight-4)
-		love.graphics.setColor(93, 43, 67)
-		love.graphics.printf(text, player.act_x-48, player.act_y+46, 112)
+		if dialogueChoice == 1 then
+			love.graphics.setColor(255, 255, 255)
+			if choicePos == 1 then
+				love.graphics.draw(arrow, player.act_x-48, player.act_y+46)
+			elseif choicePos == 2 then
+				love.graphics.draw(arrow, player.act_x-48, player.act_y+54)
+			end
+			love.graphics.setColor(93, 43, 67)
+			love.graphics.printf(text, player.act_x-42, player.act_y+46, 112)
+		else
+			love.graphics.setColor(93, 43, 67)
+			love.graphics.printf(text, player.act_x-48, player.act_y+46, 112)
+		end
 	end
 	love.graphics.pop()
 end
@@ -316,6 +329,19 @@ function love.keypressed(key)
 		f:write(initTableFile)
 		f:close(initTableFile)
 	end
+
+	if dialogueChoice == 1 then
+		if key == "up" then
+			if choicePos == 2 then
+				choicePos = 1
+			end
+		elseif key == "down" then
+			if choicePos == 1 then
+				choicePos = 2
+			end
+		end
+	end
+
 end
 
 
@@ -520,8 +546,18 @@ return false
 end
 
 --change text
-function textUpdate (npc, n)
-	text = NPCdialogue.npc[n]
+function textUpdate (num, name, dialOpt)
+	dialogueMode = 1
+	player.canMove = 0
+	text = name .. ": " .. dialOpt[num]
+end
+
+--dialogue off
+function dialogueOff(tbl, i)
+	dialogueMode = 0
+	player.canMove = 1
+	tbl[i].n = 1
+	tbl[i].dialogue = 0
 end
 
 --feed npc to dialogue
@@ -534,32 +570,55 @@ function DialogueSetup (tbl)
 			local dialOpt = NPCdialogue[name][case]
 			if case == 1 then
 				if num <= #dialOpt then
-					dialogueMode = 1
-					player.canMove = 0
-					text = name .. ": " .. dialOpt[num]
+					textUpdate(num, name, dialOpt)
 					tbl[i].n = num + 1
 					return
 				else
-					dialogueMode = 0
-					player.canMove = 1
-					tbl[i].n = 1
-					tbl[i].c = 2
-					tbl[i].dialogue = 0
-					return
+					if NPCdialogue[name][3] ~= nil then
+						print(tbl[i].n)
+						tbl[i].n = 1
+						tbl[i].c = 3
+						num = tbl[i].n
+						case = tbl[i].c
+					else
+						tbl[i].c = 2
+						print("case 1 off")
+						dialogueOff(tbl, i)
+						return
+					end
 				end
 			end
 			if case == 2 and dialOpt then
 				if num <= #dialOpt then
-					dialogueMode = 1
-					player.canMove = 0
-					text = name .. ": " .. dialOpt[num]
+					textUpdate(num, name, dialOpt)
 					tbl[i].n = num + 1
 					return
 				else
-					dialogueMode = 0
-					player.canMove = 1
-					tbl[i].n = 1
-					tbl[i].dialogue = 0
+					print("case 2 off")
+					dialogueOff(tbl, i)
+					return
+				end
+			end
+			if case == 3 then
+				if num < #playerDialogue[name] then
+					if dialogueChoice == 0 then
+						print(tbl[i].n)
+						dialogueMode = 1
+						player.canMove = 0
+						dialogueChoice = 1
+						text = playerDialogue[name][num] .. "\n" .. playerDialogue[name][num + 1]
+						return
+					elseif dialogueChoice == 1 then
+						text = dialOpt[choicePos]
+						tbl[i].n = num + 1
+						dialogueChoice = 0
+						return
+					end
+				else
+					print("case 3 off")
+					dialogueChoice = 0
+					tbl[i].c = 2
+					dialogueOff(tbl, i)
 					return
 				end
 			end
