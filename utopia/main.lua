@@ -85,8 +85,11 @@ objects = {
 	bg = love.graphics.newImage("images/utopiabg.png")
 	spritesheet1 = love.graphics.newImage("images/utopia.png")
 	animsheet1 = love.graphics.newImage("images/utopia_anim.png")
-	arrow = love.graphics.newImage("images/utopiaui_0.png")
-	arrowdown = love.graphics.newImage("images/utopiaui_5.png")
+	ui = {arrowright = love.graphics.newImage("images/utopiaui_0.png"),
+		arrowdown = love.graphics.newImage("images/utopiaui_5.png"),
+		pressz = love.graphics.newImage("images/utopiaui_6.png")
+		}
+
 
 --spritesheet, number of tiles in animation, starting position, length, width, height, duration
 	animations = {{newAnimation(animsheet1, 0, 4, 16, 16, .6), "player.walkup"},
@@ -307,9 +310,13 @@ function love.draw()
 		love.graphics.rectangle("fill", boxposx+2, boxposy+2, recwidth-4, recheight-4) -- inside box (light colored)
 
 		--draw arrow pointing down if more text
-		if choice.more == 1 and timer.trigger == 1 then
+		if timer.trigger == 1 then
 			love.graphics.setColor(255, 255, 255)
-			love.graphics.draw(arrowdown, player.act_x+58, player.act_y+58)
+			if choice.more == 1 then
+				love.graphics.draw(ui.pressz, player.act_x+58, player.act_y+58)
+			elseif choice.more == 2 then
+				love.graphics.draw(ui.arrowdown, player.act_x+58, player.act_y+58)
+			end
 		end
 
 
@@ -317,9 +324,9 @@ function love.draw()
 		if choice.mode == 1 then
 			love.graphics.setColor(255, 255, 255)
 			if choice.pos % 2 == 0 then
-				love.graphics.draw(arrow, player.act_x-48, player.act_y+54)
+				love.graphics.draw(ui.arrowright, player.act_x-48, player.act_y+54)
 			else
-				love.graphics.draw(arrow, player.act_x-48, player.act_y+46)
+				love.graphics.draw(ui.arrowright, player.act_x-48, player.act_y+46)
 			end
 			love.graphics.setColor(93, 43, 67)
 			love.graphics.printf(text, player.act_x-42, player.act_y+46, 112)
@@ -375,13 +382,11 @@ function love.keypressed(key)
 		if key == "down" then
 			if choice.pos >= 1 and choice.pos < choice.total then
 				choice.pos = choice.pos + 1
-				print("down " .. choice.pos)
 				choiceText(playerDialogue[choice.name], choice.pos, choice.total)
 			end
 		elseif key == "up" then
 			if choice.pos > 1 then
 				choice.pos = choice.pos - 1
-				print("up " .. choice.pos)
 				choiceText(playerDialogue[choice.name], choice.pos, choice.total)
 			end
 		end
@@ -594,21 +599,28 @@ end
 function textUpdate (num, name, dialOpt, case)
 	dialogueMode = 1
 	player.canMove = 0
-	if NPCdialogue[name][3] ~= nil and case ~= 3 then
-		choice.more = 1
-	else
+	if case ~= 3 then
+		if NPCdialogue[name][3] ~= nil and case == 1 then
+			if num == #dialOpt then
+			choice.more = 1
+			end
+		end
 		if num < #dialOpt then
+			print("more choices case " .. case)
 			choice.more = 1
 		else
+			print("no more choices case " .. case)
 			choice.more = 0
 		end
+	else
+		choice.more = 0
 	end
 	text = name .. ": " .. dialOpt[num]
-	print("choice more" .. choice.more)
 end
 
 --dialogue off
 function dialogueOff(tbl, i)
+	choice.more = 0
 	dialogueMode = 0
 	player.canMove = 1
 	tbl[i].n = 1
@@ -627,7 +639,7 @@ function choiceText(tbl, pos, total)
 		n = 0
 	end
 	if pos < total - n then
-		choice.more = 1
+		choice.more = 2
 	else
 		choice.more = 0
 	end
@@ -664,10 +676,8 @@ function DialogueSetup (tbl)
 					return
 				else
 					if NPCdialogue[name][3] ~= nil then
-						tbl[i].n = 1
 						tbl[i].c = 3
-						num = tbl[i].n
-						case = tbl[i].c
+						dialogueOff(tbl, i)
 					else
 						tbl[i].c = 2
 						print("case 1 off")
@@ -688,24 +698,25 @@ function DialogueSetup (tbl)
 				end
 			end
 			if case == 3 then
-				if num < 2 then
+				if num == 1 then
+					textUpdate(num, name, dialOpt[1], case)
+					tbl[i].n = num + 1
+					return
+				elseif num == 2 then
 					if choice.mode == 0 then
-						print("num" .. num)
-						print("tblin" .. tbl[i].n)
 						choice.mode = 1
 						choice.total = #playerDialogue[name]
 						choice.name = name -- set total number of choices available based on number of values in table
 						choiceText(playerDialogue[name], choice.pos, choice.total)
 						return
 					elseif choice.mode == 1 then
-						textUpdate (choice.pos, name, dialOpt, case)
-						tbl[i].n = num + 1
+						textUpdate (choice.pos, name, dialOpt[2], case)
 						choice.mode = 0
+						tbl[i].n = num + 1
 						return
 					end
-				else
+				elseif num == 3 then
 					print("case 3 off")
-					choice.mode = 0
 					tbl[i].c = 2
 					dialogueOff(tbl, i)
 					return

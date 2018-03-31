@@ -3,10 +3,11 @@ NPCdialogue = {
           [2] = {"Have a great day!"}, --repeat
           [3] = nil, --options
         }, -- repeat
-  Lark = {[1] = {"I love looking at the water, don't you?", "It's a bit too cold for swimming today.", "What's your favourite fish?"}, -- say once
+  Lark = {[1] = {"I love looking at the water, don't you?", "It's a bit too cold for swimming today."}, -- say once
           [2] = {"See you later comrade!"},-- repeat
-          [3] = {"Mine too!", "That makes sense.", "Ohh good choice!"}} -- options
-}
+          [3] = {{"What's your favourite fish?"},{"Mine too!", "That makes sense.", "Ohh good choice!"}} -- options
+        }
+      }
 
 playerDialogue = {
   Lark = {"Carp", "Trout", "Salmon"}
