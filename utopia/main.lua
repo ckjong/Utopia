@@ -112,28 +112,39 @@ objects = {
 --timer for blinking text/images
 	timer = {base = .5, current = 0, trigger = 0}
 
-	initTable = mapSize (bg, gridsize)
-	fillEdges(initTable)
+
 
 -- camera
 	require("scripts/camera")
 	mouseTranslate = {}
 
-
+if file_exists("D:\\my game projects\\utopia\\maps\\abc1.txt") then
+	mapExists = 1
+	f = assert(io.open("D:\\my game projects\\utopia\\maps\\abc1.txt", "r"))
+	local content = f:read("*a")
+	initTable = json.decode(content)
+	io.close(f)
+	initTableFile = json.encode(initTable)
+else
+	mapExists = 0
+	initTable = mapSize (bg, gridsize)
+	fillEdges(initTable)
 	f = assert(io.open("D:\\my game projects\\utopia\\scripts\\abc.txt", "w"))
 	initTableFile = json.encode(initTable)
 	f:write(initTableFile)
 	f:close(initTableFile)
+end
 
-	file = assert(io.open("D:\\my game projects\\utopia\\maps\\abc1.txt", "r"))
-	local content = file:read("*a")
-	initTable = json.decode(content)
-	io.close(file)
+
 
 
 	--table.save(initTable, "D:\\my game projects\\utopia\\scripts\\initTable.lua")
 end
 
+function file_exists(name)
+	 local f=io.open(name,"r")
+	 if f~=nil then io.close(f) return true else return false end
+end
 
 function love.update(dt)
 if timer.current > 0 then
@@ -344,10 +355,19 @@ function love.keypressed(key)
 	end
 
 	if key == "s" and debugview == 1 then
-		f = assert(io.open("D:\\my game projects\\utopia\\scripts\\abc.txt", "w"))
-		initTableFile = json.encode(initTable)
-		f:write(initTableFile)
-		f:close(initTableFile)
+		if mapExists == 1 then
+			print("saved over old map")
+			f = assert(io.open("D:\\my game projects\\utopia\\maps\\abc1.txt", "w"))
+			initTableFile = json.encode(initTable)
+			f:write(initTableFile)
+			f:close(initTableFile)
+		else
+			print("saved over new map")
+			f = assert(io.open("D:\\my game projects\\utopia\\scripts\\abc.txt", "w"))
+			initTableFile = json.encode(initTable)
+			f:write(initTableFile)
+			f:close(initTableFile)
+		end
 	end
 
 -- move between dialogue options
