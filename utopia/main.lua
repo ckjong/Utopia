@@ -9,12 +9,19 @@ require("scripts/editor")
 --json for map files
 json = require("json")
 
+
+--map
+	gridsize = 16
+	debugview = 0
+
+
+
 --characters
 	player = {
-		grid_x = 8*16,
-		grid_y = 17*16,
-		act_x = 8*16,
-		act_y = 17*16,
+		grid_x = 8*gridsize,
+		grid_y = 17*gridsize,
+		act_x = 8*gridsize,
+		act_y = 17*gridsize,
 		speed = 32,
 		canMove = 1,
 		moveDir = 0,
@@ -24,10 +31,10 @@ json = require("json")
 	}
 
 	npcs = {{
-		grid_x = 5*16,
-		grid_y = 10*16,
-		act_x = 5*16,
-		act_y = 10*16,
+		grid_x = 5*gridsize,
+		grid_y = 10*gridsize,
+		act_x = 5*gridsize,
+		act_y = 10*gridsize,
 		speed = 30,
 		canMove = 0,
 		moveDir = 0,
@@ -40,10 +47,10 @@ json = require("json")
 		n = 1, --stage in single conversation
 		c = 1}, -- dialogue case
 		{
-			grid_x = 9*16,
-			grid_y = 21*16,
-			act_x = 9*16,
-			act_y = 21*16,
+			grid_x = 9*gridsize,
+			grid_y = 21*gridsize,
+			act_x = 9*gridsize,
+			act_y = 21*gridsize,
 			speed = 30,
 			canMove = 0,
 			moveDir = 0,
@@ -56,11 +63,6 @@ json = require("json")
 			n = 1, --stage in single conversation
 			c = 1} -- dialogue case
 }
-
-
---map
-	gridsize = 16
-	debugview = 0
 
 
 --objects
@@ -84,6 +86,7 @@ objects = {
 	spritesheet1 = love.graphics.newImage("images/utopia.png")
 	animsheet1 = love.graphics.newImage("images/utopia_anim.png")
 	arrow = love.graphics.newImage("images/utopiaui_0.png")
+	arrowdown = love.graphics.newImage("images/utopiaui_5.png")
 
 --spritesheet, number of tiles in animation, starting position, length, width, height, duration
 	animations = {{newAnimation(animsheet1, 0, 4, 16, 16, .6), "player.walkup"},
@@ -103,11 +106,11 @@ objects = {
 --dialogue
 	font = love.graphics.setNewFont("fonts/pixel.ttf", 8)
 	dialogueMode = 0
-	dialogueChoice = 0
-	choicePos = 1
+	choice = {mode = 0, pos = 1, total = 1, name = "", more = 0}
 	text = nil
 
-
+--timer for blinking text/images
+	timer = {base = .5, current = 0, trigger = 0}
 
 	initTable = mapSize (bg, gridsize)
 	fillEdges(initTable)
@@ -132,13 +135,17 @@ objects = {
 end
 
 
-
-
-
-
 function love.update(dt)
-
-
+if timer.current > 0 then
+	timer.current = timer.current - dt
+else
+	if timer.trigger == 0 then
+		timer.trigger = 1
+	else
+	 timer.trigger = 0
+	end
+	timer.current = timer.base
+end
 	--immobilize player if dialoguemode active
 	if dialogueMode == 1 then
 		player.canMove = 0
@@ -281,16 +288,27 @@ function love.draw()
 		local ynudge = 2
 		local boxposx = player.act_x - (width/2) + xnudge
 		local boxposy = player.act_y + (height/2) - recheight + ynudge
+		local arrowdposx = boxposx + recwidth - 16
+		local arrowdposy = boxposx + recheight - 16
 		love.graphics.setColor(93, 43, 67)
-		love.graphics.rectangle("fill", boxposx, boxposy, recwidth, recheight)
+		love.graphics.rectangle("fill", boxposx, boxposy, recwidth, recheight) -- outside box (dark)
 		love.graphics.setColor(255, 247, 220)
-		love.graphics.rectangle("fill", boxposx+2, boxposy+2, recwidth-4, recheight-4)
-		if dialogueChoice == 1 then
+		love.graphics.rectangle("fill", boxposx+2, boxposy+2, recwidth-4, recheight-4) -- inside box (light colored)
+
+		--draw arrow pointing down if more text
+		if choice.more == 1 and timer.trigger == 1 then
 			love.graphics.setColor(255, 255, 255)
-			if choicePos == 1 then
-				love.graphics.draw(arrow, player.act_x-48, player.act_y+46)
-			elseif choicePos == 2 then
+			love.graphics.draw(arrowdown, player.act_x+58, player.act_y+58)
+		end
+
+
+		--draw arrow for choices, shift text if arrow present
+		if choice.mode == 1 then
+			love.graphics.setColor(255, 255, 255)
+			if choice.pos % 2 == 0 then
 				love.graphics.draw(arrow, player.act_x-48, player.act_y+54)
+			else
+				love.graphics.draw(arrow, player.act_x-48, player.act_y+46)
 			end
 			love.graphics.setColor(93, 43, 67)
 			love.graphics.printf(text, player.act_x-42, player.act_y+46, 112)
@@ -298,7 +316,9 @@ function love.draw()
 			love.graphics.setColor(93, 43, 67)
 			love.graphics.printf(text, player.act_x-48, player.act_y+46, 112)
 		end
+
 	end
+
 	love.graphics.pop()
 end
 
@@ -306,13 +326,13 @@ end
 function love.keypressed(key)
 
 --initiate debug mode
- if key == "p" then
+  if key == "p" then
 	 	if debugview == 0 then
     	debugview = 1
 		elseif debugview == 1 then
 			debugview = 0
 		end
- end
+  end
 --- interact with objects or people
   if key == "z" then
 		DialogueSetup(npcs)
@@ -330,14 +350,19 @@ function love.keypressed(key)
 		f:close(initTableFile)
 	end
 
-	if dialogueChoice == 1 then
-		if key == "up" then
-			if choicePos == 2 then
-				choicePos = 1
+-- move between dialogue options
+	if choice.mode == 1 then
+		if key == "down" then
+			if choice.pos >= 1 and choice.pos < choice.total then
+				choice.pos = choice.pos + 1
+				print("down " .. choice.pos)
+				choiceText(playerDialogue[choice.name], choice.pos, choice.total)
 			end
-		elseif key == "down" then
-			if choicePos == 1 then
-				choicePos = 2
+		elseif key == "up" then
+			if choice.pos > 1 then
+				choice.pos = choice.pos - 1
+				print("up " .. choice.pos)
+				choiceText(playerDialogue[choice.name], choice.pos, choice.total)
 			end
 		end
 	end
@@ -546,10 +571,20 @@ return false
 end
 
 --change text
-function textUpdate (num, name, dialOpt)
+function textUpdate (num, name, dialOpt, case)
 	dialogueMode = 1
 	player.canMove = 0
+	if NPCdialogue[name][3] ~= nil and case ~= 3 then
+		choice.more = 1
+	else
+		if num < #dialOpt then
+			choice.more = 1
+		else
+			choice.more = 0
+		end
+	end
 	text = name .. ": " .. dialOpt[num]
+	print("choice more" .. choice.more)
 end
 
 --dialogue off
@@ -560,6 +595,40 @@ function dialogueOff(tbl, i)
 	tbl[i].dialogue = 0
 end
 
+
+--choice text
+function choiceText(tbl, pos, total)
+	dialogueMode = 1
+	player.canMove = 0
+	local n = 0
+	if total % 2 == 0 then
+		n = 1
+	else
+		n = 0
+	end
+	if pos < total - n then
+		choice.more = 1
+	else
+		choice.more = 0
+	end
+	if total % 2 == 0 then
+		if pos % 2 == 0 then
+			text = tbl[pos-1] .. "\n" .. tbl[pos]
+		else
+			text = tbl[pos] .. "\n" .. tbl[pos+1]
+		end
+	else
+		if pos == total then
+			text = tbl[pos]
+		else
+			if pos % 2 == 0 then
+				text = tbl[pos-1] .. "\n" .. tbl[pos]
+			else
+				text = tbl[pos] .. "\n" .. tbl[pos+1]
+			end
+		end
+	end
+end
 --feed npc to dialogue
 function DialogueSetup (tbl)
 	for i = 1, #tbl do
@@ -570,12 +639,11 @@ function DialogueSetup (tbl)
 			local dialOpt = NPCdialogue[name][case]
 			if case == 1 then
 				if num <= #dialOpt then
-					textUpdate(num, name, dialOpt)
+					textUpdate(num, name, dialOpt, case)
 					tbl[i].n = num + 1
 					return
 				else
 					if NPCdialogue[name][3] ~= nil then
-						print(tbl[i].n)
 						tbl[i].n = 1
 						tbl[i].c = 3
 						num = tbl[i].n
@@ -590,7 +658,7 @@ function DialogueSetup (tbl)
 			end
 			if case == 2 and dialOpt then
 				if num <= #dialOpt then
-					textUpdate(num, name, dialOpt)
+					textUpdate(num, name, dialOpt, case)
 					tbl[i].n = num + 1
 					return
 				else
@@ -600,23 +668,24 @@ function DialogueSetup (tbl)
 				end
 			end
 			if case == 3 then
-				if num < #playerDialogue[name] then
-					if dialogueChoice == 0 then
-						print(tbl[i].n)
-						dialogueMode = 1
-						player.canMove = 0
-						dialogueChoice = 1
-						text = playerDialogue[name][num] .. "\n" .. playerDialogue[name][num + 1]
+				if num < 2 then
+					if choice.mode == 0 then
+						print("num" .. num)
+						print("tblin" .. tbl[i].n)
+						choice.mode = 1
+						choice.total = #playerDialogue[name]
+						choice.name = name -- set total number of choices available based on number of values in table
+						choiceText(playerDialogue[name], choice.pos, choice.total)
 						return
-					elseif dialogueChoice == 1 then
-						text = dialOpt[choicePos]
+					elseif choice.mode == 1 then
+						textUpdate (choice.pos, name, dialOpt, case)
 						tbl[i].n = num + 1
-						dialogueChoice = 0
+						choice.mode = 0
 						return
 					end
 				else
 					print("case 3 off")
-					dialogueChoice = 0
+					choice.mode = 0
 					tbl[i].c = 2
 					dialogueOff(tbl, i)
 					return

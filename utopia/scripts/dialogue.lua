@@ -5,11 +5,11 @@ NPCdialogue = {
         }, -- repeat
   Lark = {[1] = {"I love looking at the water, don't you?", "It's a bit too cold for swimming today.", "What's your favourite fish?"}, -- say once
           [2] = {"See you later comrade!"},-- repeat
-          [3] = {"Mine too!", "That makes sense."}} -- options
+          [3] = {"Mine too!", "That makes sense.", "Ohh good choice!"}} -- options
 }
 
 playerDialogue = {
-  Lark = {"Carp", "Trout"}
+  Lark = {"Carp", "Trout", "Salmon"}
 }
 
 objectText = {
