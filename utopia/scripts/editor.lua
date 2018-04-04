@@ -22,6 +22,33 @@ function fillEdges(tbl)
 	end
 end
 
+-- check if a file exists
+function file_exists(name)
+	 local f=io.open(name,"r")
+	 if f~=nil then io.close(f) print("true") return true else print("false") return false end
+end
+
+--generate map file or load current map to table
+function mapGen (img, file1, file2)
+  print(mapExists)
+	if file_exists(file2) then
+		mapExists = 1
+		f = assert(io.open(file2, "r"))
+		local content = f:read("*a")
+		initTable = json.decode(content)
+		io.close(f)
+		initTableFile = json.encode(initTable)
+	else
+		mapExists = 0
+		initTable = mapSize (img, gridsize)
+		fillEdges(initTable)
+		f = assert(io.open(file1, "w"))
+		initTableFile = json.encode(initTable)
+		f:write(initTableFile)
+		f:close(initTableFile)
+	end
+end
+
 function drawEditor (tbl)
   if tbl then
     for y=1, #tbl do

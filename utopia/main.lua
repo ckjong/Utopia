@@ -13,8 +13,11 @@ json = require("json")
 --map
 	gridsize = 16
 	debugview = 0
-
-
+	mapExists = 0
+	locations = {[1] = "Overworld", [2] = "Gardening Shed"}
+	currentLocation = locations[1]
+	mapFile1 = "C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\scripts\\map.txt"
+	mapFile2 = "C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\maps\\map1.txt"
 
 --characters
 	player = {
@@ -69,20 +72,27 @@ json = require("json")
 objects = {
 	{7, 11, "GardeningSign"},
 	{7, 18, "KitchenSign"},
-	{17, 11, "ClinicSign"},
+	{17, 10, "ClinicSign"},
 	{10, 8, "Cauliflower"},
 	{12, 8, "Cauliflower2"},
 	{18, 16, "RepairSign"},
 	{25, 15, "GlassSign"},
-	{31, 15, "WoodworkingSign"}
-
+	{31, 15, "WoodworkingSign"},
+	{36, 14, "MuseumSign"},
+ 	{28, 25, "DormitorySign"},
+	{36, 24, "LibrarySign"},
+	{40, 24, "ScienceSign"},
+	{23, 33, "GatheringSign"},
+	{33, 30, "StationSign"},
+	{28, 17, "RainbowArt"},
+	{27, 13, "GenderArt"}
 }
 --images
 	love.graphics.setDefaultFilter("nearest", "nearest")
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.setBackgroundColor(255,255,255)
 
-	bg = love.graphics.newImage("images/utopiabg.png")
+	bg1 = love.graphics.newImage("images/utopiabg.png")
 	spritesheet1 = love.graphics.newImage("images/utopia.png")
 	animsheet1 = love.graphics.newImage("images/utopia_anim.png")
 	ui = {arrowright = love.graphics.newImage("images/utopiaui_0.png"),
@@ -116,50 +126,29 @@ objects = {
 	timer = {base = .5, current = 0, trigger = 0}
 
 
-
--- camera
-	require("scripts/camera")
-	mouseTranslate = {}
-
-if file_exists("D:\\my game projects\\utopia\\maps\\abc1.txt") then
-	mapExists = 1
-	f = assert(io.open("D:\\my game projects\\utopia\\maps\\abc1.txt", "r"))
-	local content = f:read("*a")
-	initTable = json.decode(content)
-	io.close(f)
-	initTableFile = json.encode(initTable)
-else
-	mapExists = 0
-	initTable = mapSize (bg, gridsize)
-	fillEdges(initTable)
-	f = assert(io.open("D:\\my game projects\\utopia\\scripts\\abc.txt", "w"))
-	initTableFile = json.encode(initTable)
-	f:write(initTableFile)
-	f:close(initTableFile)
-end
-
-
+--generate map
+	if currentLocation == "Overworld" then
+		print(currentLocation)
+		mapGen (bg1, mapFile1, mapFile2)
+	end
 
 
 	--table.save(initTable, "D:\\my game projects\\utopia\\scripts\\initTable.lua")
 end
 
-function file_exists(name)
-	 local f=io.open(name,"r")
-	 if f~=nil then io.close(f) return true else return false end
-end
+
 
 function love.update(dt)
-if timer.current > 0 then
-	timer.current = timer.current - dt
-else
-	if timer.trigger == 0 then
-		timer.trigger = 1
+	if timer.current > 0 then
+		timer.current = timer.current - dt
 	else
-	 timer.trigger = 0
+		if timer.trigger == 0 then
+			timer.trigger = 1
+		else
+		 timer.trigger = 0
+		end
+		timer.current = timer.base
 	end
-	timer.current = timer.base
-end
 	--immobilize player if dialoguemode active
 	if dialogueMode == 1 then
 		player.canMove = 0
@@ -220,16 +209,10 @@ end
 	--animation time update
 	for k, v in pairs(animations) do
 		animations[k][1]["currentTime"] = animations[k][1]["currentTime"] + dt
-	    if animations[k][1]["currentTime"] >= animations[k][1]["duration"] then
-	        animations[k][1]["currentTime"] = animations[k][1]["currentTime"] - animations[k][1]["duration"]
-	    end
+    if animations[k][1]["currentTime"] >= animations[k][1]["duration"] then
+        animations[k][1]["currentTime"] = animations[k][1]["currentTime"] - animations[k][1]["duration"]
+    end
 	end
-
-	--- mouse transform
-	local width = love.graphics.getWidth()
-	local height = love.graphics.getHeight()
-	mouseTranslate.x = -player.act_x*4 + ((width - gridsize*4)/4)
-	mouseTranslate.y = -player.act_y*4 + ((height - gridsize*4)/4)
 end
 
 function love.draw()
@@ -251,7 +234,7 @@ function love.draw()
 		-- camera:scale(4)
 
 	love.graphics.setColor(255, 255, 255)
-	love.graphics.draw(bg, 16, 16)
+	love.graphics.draw(bg1, 16, 16)
 
 	--draw map
 	if debugview == 1 then
@@ -364,18 +347,21 @@ function love.keypressed(key)
 	if key == "s" and debugview == 1 then
 		if mapExists == 1 then
 			print("saved over old map")
-			f = assert(io.open("D:\\my game projects\\utopia\\maps\\abc1.txt", "w"))
+			f = assert(io.open(mapFile2, "w"))
 			initTableFile = json.encode(initTable)
 			f:write(initTableFile)
 			f:close(initTableFile)
 		else
 			print("saved over new map")
-			f = assert(io.open("D:\\my game projects\\utopia\\scripts\\abc.txt", "w"))
+			f = assert(io.open(mapFile1, "w"))
 			initTableFile = json.encode(initTable)
 			f:write(initTableFile)
 			f:close(initTableFile)
 		end
 	end
+
+
+
 
 -- move between dialogue options
 	if choice.mode == 1 then
