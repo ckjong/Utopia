@@ -65,11 +65,9 @@ function drawEditor (tbl)
 end
 
 function addBlock (tbl, x, y)
-  print("triggered")
-  print(x, y)
+  print("triggered addblock")
   local k = math.floor(x/16)
   local v = math.floor(y/16)
-  print(k, v)
   if tbl[v][k] == 0 then
     tbl[v][k] = 1
   elseif tbl[v][k] == 1 then

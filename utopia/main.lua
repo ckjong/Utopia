@@ -6,19 +6,33 @@ function love.load()
 require("scripts/dialogue")
 --editor for creating new maps
 require("scripts/editor")
+--code for navigating between maps
+require("scripts/drawfunctions")
 --json for map files
 json = require("json")
 
 
 --map
 	gridsize = 16
-	debugview = 0
+	debugView = 0
+	infoView = 0
 	mapExists = 0
-	locations = {[1] = "Overworld", [2] = "Gardening Shed"}
-	currentLocation = locations[1]
-	mapFile1 = "C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\scripts\\map.txt"
-	mapFile2 = "C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\maps\\map1.txt"
+	locationTriggers = {
+										overworld = {
+											{6*gridsize, 9*gridsize, "gardeningShed", 6*gridsize, 12*gridsize},
+											{18*gridsize, 9*gridsize, "clinic", 4*gridsize, 10*gridsize}},
+										gardeningShed = {
+											{6*gridsize, 13*gridsize, "overworld", 6*gridsize, 10*gridsize}}
+									}
+	currentLocation = "overworld"
+	mapPath = {overworld = {"C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\scripts\\map.txt",
+	"C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\maps\\map1.txt"},
+	gardeningShed = {"C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\scripts\\map.txt",
+	"C:\\Users\\Carolyn\\Documents\\GitHub\\Utopia\\utopia\\maps\\map2.txt"}
+}
 
+	mapFile1 = nil
+	mapFile2 = nil
 --characters
 	player = {
 		grid_x = 8*gridsize,
@@ -43,7 +57,8 @@ json = require("json")
 		moveDir = 0,
 		threshold = 0,
 		facing = 1,
-		start = 1,
+		start = 1, --direction facing when starting
+		location = "overworld",
 		dialogue = 0,
 		name = "Grape",
 		animationkey = 5, -- where animations start
@@ -60,6 +75,7 @@ json = require("json")
 			threshold = 0,
 			facing = 1,
 			start = 2,
+			location = "overworld",
 			dialogue = 0,
 			name = "Lark",
 			animationkey = 9, -- where animations start
@@ -92,14 +108,18 @@ objects = {
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.setBackgroundColor(255,255,255)
 
-	bg1 = love.graphics.newImage("images/utopiabg.png")
+
+	bg = {overworld = love.graphics.newImage("images/utopiabg.png"),
+				gardeningShed = love.graphics.newImage("images/utopia_gardeningshedbg.png")}
+	currentBackground = bg.overworld
+
 	spritesheet1 = love.graphics.newImage("images/utopia.png")
 	animsheet1 = love.graphics.newImage("images/utopia_anim.png")
 	ui = {arrowright = love.graphics.newImage("images/utopiaui_0.png"),
 		arrowdown = love.graphics.newImage("images/utopiaui_5.png"),
 		pressz = love.graphics.newImage("images/utopiaui_6.png")
 		}
-
+	toptiles = {gardeningShed = love.graphics.newImage("images/utopia_toptiles_0.png")}
 
 --spritesheet, number of tiles in animation, starting position, length, width, height, duration
 	animations = {{newAnimation(animsheet1, 0, 4, 16, 16, .6), "player.walkup"},
@@ -127,16 +147,49 @@ objects = {
 
 
 --generate map
-	if currentLocation == "Overworld" then
-		print(currentLocation)
-		mapGen (bg1, mapFile1, mapFile2)
-	end
+local mapFile1 = mapPath.overworld[1]
+local mapFile2 = mapPath.overworld[2]
+mapGen (bg.overworld, mapFile1, mapFile2)
 
 
 	--table.save(initTable, "D:\\my game projects\\utopia\\scripts\\initTable.lua")
 end
 
+--generate new maps or load old ones for each area
+function locationMaps()
+	if currentLocation == "overworld" then
+		mapFile1 = mapPath.overworld[1]
+		mapFile2 = mapPath.overworld[2]
+		print(currentLocation)
+		mapGen (bg.overworld, mapFile1, mapFile2)
+	elseif currentLocation == "gardeningShed" then
+		mapFile1 = mapPath.gardeningShed[1]
+		mapFile2 = mapPath.gardeningShed[2]
+		print(currentLocation)
+		mapGen (bg.gardeningShed, mapFile1, mapFile2)
+	end
+end
 
+--change location and map to match new location
+function changeMap(px, py, tbl)
+  for i = 1, #tbl do
+    if px == tbl[i][1] and py == tbl[i][2] then
+      currentLocation = tbl[i][3]
+      locationMaps()
+			changeBackground(currentLocation)
+			player.grid_x = tbl[i][4]
+			player.act_x = player.grid_x
+			player.grid_y = tbl[i][5]
+			player.act_y = player.grid_y
+			print(currentLocation)
+    end
+  end
+end
+
+--change background to match location
+function changeBackground(l)
+	currentBackground = bg[l]
+end
 
 function love.update(dt)
 	if timer.current > 0 then
@@ -155,7 +208,7 @@ function love.update(dt)
 	end
 
 --set direction and destination position
-	if debugview == 0 then
+	if debugView == 0 then
 		if player.canMove == 1 then
 			if love.keyboard.isDown("up") and player.act_y <= player.grid_y then
 				changeGridy (player, 1, 0, -1, -1) -- char, dir, x-test, y-test, multiplier
@@ -167,7 +220,7 @@ function love.update(dt)
 				changeGridx (player, 4, 1, 0, 1)
 			end
 		end
-	elseif debugview == 1 then
+	elseif debugView == 1 then
 		if player.canMove == 1 then
 			if love.keyboard.isDown("up") and player.act_y <= player.grid_y then
 				player.facing = 1
@@ -203,9 +256,9 @@ function love.update(dt)
 
 	player.moveDir, player.act_x, player.act_y = moveChar(player.moveDir, player.act_x, player.grid_x, player.act_y, player.grid_y, (player.speed *dt))
 
-	--initDialogue
-
-
+	if player.canMove == 1 then
+		changeMap(player.act_x, player.act_y, locationTriggers[currentLocation])
+	end
 	--animation time update
 	for k, v in pairs(animations) do
 		animations[k][1]["currentTime"] = animations[k][1]["currentTime"] + dt
@@ -214,6 +267,10 @@ function love.update(dt)
     end
 	end
 end
+
+
+-- DRAW --
+---------------
 
 function love.draw()
 	local width = love.graphics.getWidth( )
@@ -226,54 +283,34 @@ function love.draw()
 	love.graphics.scale( scale.x, scale.y )
 
 	-- draw background
-
-		-- local width = love.graphics.getWidth( )
-		-- local height = love.graphics.getHeight()
-		-- camera.x = (width - gridsize*4) / 2
-		-- camera.y = (height - gridsize*4) / 2
-		-- camera:scale(4)
-
+	love.graphics.setBackgroundColor(93, 43, 67)
 	love.graphics.setColor(255, 255, 255)
-	love.graphics.draw(bg1, 16, 16)
+	love.graphics.draw(currentBackground, 16, 16)
 
 	--draw map
-	if debugview == 1 then
+	if debugView == 1 then
 		love.graphics.setColor(0, 0, 0)
 		drawEditor (initTable)
-		-- for y=1, #map do
-		-- 	for x=1, #map[y] do
-		-- 		if map[y][x] == 1 then
-		-- 			love.graphics.rectangle("line", x * 16, y * 16, 16, 16)
-		-- 		end
-		-- 	end
-		-- end
+	end
+
+	--draw extra infoView
+	if infoView == 1 then
+		love.graphics.setColor(0, 0, 0)
+		love.graphics.print(currentLocation, player.act_x - 48, player.act_y - 48)
+		love.graphics.print("x: " .. player.act_x .." y: " .. player.act_y, player.act_x - 48, player.act_y - 40)
 	end
 
 	--render player
 	love.graphics.setColor(255, 255, 255)
-	for i = 1, 4 do
-		if player.moveDir == i then
-			local spriteNum = math.floor(animations[i][1]["currentTime"] / animations[i][1]["duration"] * #animations[i][1]["quads"]) + 1
-	   		love.graphics.draw(animations[i][1]["spriteSheet"], animations[i][1]["quads"][spriteNum], player.act_x, player.act_y, 0, 1)
-	 	elseif player.moveDir == 0 then
-			if player.facing == i then
-				love.graphics.draw(animations[i][1]["spriteSheet"], animations[i][1]["quads"][1], player.act_x, player.act_y, 0, 1)
-			end
-		end
-	end
+	drawPlayer()
 
 	--render npcs
-		for i = 1, #npcs do
-			local k = npcs[i].animationkey
-			local f = npcs[i].facing-1
-			local s = npcs[i].start-1
-			if npcs[i].dialogue == 1 then
-				love.graphics.draw(animations[k+f][1]["spriteSheet"], animations[k+f][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
-			else
-				love.graphics.draw(animations[k+s][1]["spriteSheet"], animations[k+s][1]["quads"][1], npcs[i].act_x, npcs[i].act_y, 0, 1)
-			end
-		end
+	drawNPCs()
 
+	-- render tiles on top of player
+	if currentLocation ~= "overworld" then
+		drawTop(currentLocation, locationTriggers)
+	end
 
 	--render dialogue box and text
 	if text ~= nil and dialogueMode == 1 then
@@ -285,38 +322,16 @@ function love.draw()
 		local ynudge = 2
 		local boxposx = player.act_x - (width/2) + xnudge
 		local boxposy = player.act_y + (height/2) - recheight + ynudge
-		local arrowdposx = boxposx + recwidth - 16
-		local arrowdposy = boxposx + recheight - 16
 		love.graphics.setColor(93, 43, 67)
 		love.graphics.rectangle("fill", boxposx, boxposy, recwidth, recheight) -- outside box (dark)
 		love.graphics.setColor(255, 247, 220)
 		love.graphics.rectangle("fill", boxposx+2, boxposy+2, recwidth-4, recheight-4) -- inside box (light colored)
 
-		--draw arrow pointing down if more text
-		if timer.trigger == 1 then
-			love.graphics.setColor(255, 255, 255)
-			if choice.more == 1 then
-				love.graphics.draw(ui.pressz, player.act_x+58, player.act_y+58)
-			elseif choice.more == 2 then
-				love.graphics.draw(ui.arrowdown, player.act_x+58, player.act_y+58)
-			end
-		end
-
+		--draw z or arrow if more text
+		drawArrow()
 
 		--draw arrow for choices, shift text if arrow present
-		if choice.mode == 1 then
-			love.graphics.setColor(255, 255, 255)
-			if choice.pos % 2 == 0 then
-				love.graphics.draw(ui.arrowright, player.act_x-48, player.act_y+54)
-			else
-				love.graphics.draw(ui.arrowright, player.act_x-48, player.act_y+46)
-			end
-			love.graphics.setColor(93, 43, 67)
-			love.graphics.printf(text, player.act_x-42, player.act_y+46, 112)
-		else
-			love.graphics.setColor(93, 43, 67)
-			love.graphics.printf(text, player.act_x-48, player.act_y+46, 112)
-		end
+		drawText()
 
 	end
 
@@ -328,23 +343,31 @@ function love.keypressed(key)
 
 --initiate debug mode
   if key == "p" then
-	 	if debugview == 0 then
-    	debugview = 1
-		elseif debugview == 1 then
-			debugview = 0
+	 	if debugView == 0 then
+    	debugView = 1
+		elseif debugView == 1 then
+			debugView = 0
 		end
   end
+--print additional info about game on screen for debugging
+	if key == "i" then
+		if infoView == 0 then
+			infoView = 1
+		else
+			infoView = 0
+		end
+	end
 --- interact with objects or people
   if key == "z" then
 		DialogueSetup(npcs)
 		faceObject(player.facing)
 	end
 -- add block to editor
-	if key == "space" and debugview == 1 then
+	if key == "space" and debugView == 1 then
 		addBlock (initTable, player.grid_x, player.grid_y)
 	end
 
-	if key == "s" and debugview == 1 then
+	if key == "s" and debugView == 1 then
 		if mapExists == 1 then
 			print("saved over old map")
 			f = assert(io.open(mapFile2, "w"))
@@ -391,23 +414,25 @@ end
 
 function testNPC(dir, x, y)
 	for i = 1, #npcs do
-		x2 = npcs[i].act_x
-		y2 = npcs[i].act_y
-		if dir == 1 then
-			if x == x2 and y - gridsize == y2 then
-				return true
-			end
-		elseif dir == 2 then
-			if x == x2 and y + gridsize == y2 then
-				return true
-			end
-		elseif dir == 3 then
-			if y == y2 and x - gridsize == x2 then
-				return true
-			end
-		elseif dir == 4 then
-			if y == y2 and x + gridsize == x2 then
-				return true
+		if currentLocation == npcs[i].location then
+			local x2 = npcs[i].act_x
+			local y2 = npcs[i].act_y
+			if dir == 1 then
+				if x == x2 and y - gridsize == y2 then
+					return true
+				end
+			elseif dir == 2 then
+				if x == x2 and y + gridsize == y2 then
+					return true
+				end
+			elseif dir == 3 then
+				if y == y2 and x - gridsize == x2 then
+					return true
+				end
+			elseif dir == 4 then
+				if y == y2 and x + gridsize == x2 then
+					return true
+				end
 			end
 		end
 	end
@@ -555,26 +580,28 @@ end
 
 --initiate dialogue
 function initDialogue (char)
-	if player.act_y == char.act_y then
-		if player.act_x == char.act_x - gridsize and player.facing == 4 then
-			char.dialogue = 1
-			char.facing = 3
-			return true
-		elseif player.act_x == char.act_x + gridsize and player.facing == 3 then
-			char.dialogue = 1
-			char.facing = 4
-			return true
+	if currentLocation == char.location then
+		if player.act_y == char.act_y then
+			if player.act_x == char.act_x - gridsize and player.facing == 4 then
+				char.dialogue = 1
+				char.facing = 3
+				return true
+			elseif player.act_x == char.act_x + gridsize and player.facing == 3 then
+				char.dialogue = 1
+				char.facing = 4
+				return true
+			end
 		end
-	end
-	if player.act_x == char.act_x then
-		if player.act_y == char.act_y - gridsize and player.facing == 2 then
-			char.dialogue = 1
-			char.facing = 1
-			return true
-		elseif player.act_y == char.act_y + gridsize and player.facing == 1 then
-			char.dialogue = 1
-			char.facing = 2
-			return true
+		if player.act_x == char.act_x then
+			if player.act_y == char.act_y - gridsize and player.facing == 2 then
+				char.dialogue = 1
+				char.facing = 1
+				return true
+			elseif player.act_y == char.act_y + gridsize and player.facing == 1 then
+				char.dialogue = 1
+				char.facing = 2
+				return true
+			end
 		end
 	end
 char.dialogue = 0
